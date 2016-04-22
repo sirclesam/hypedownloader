@@ -17,7 +17,7 @@ def clean_filename(filename)
   end
 end
 def prompt_int(prompt, default)
-  prompt = prompt + " [#{default}]" if (default != nil)  
+  prompt = prompt + " [#{default}]" if (default != nil)
   prompt += ": "
   while true
     print prompt
@@ -31,16 +31,16 @@ def prompt_int(prompt, default)
   end
 end
 
-def prompt_string(prompt, default) 
-  prompt = prompt + " [#{default}]" if default != nil  
+def prompt_string(prompt, default)
+  prompt = prompt + " [#{default}]" if default != nil
   prompt = prompt + ": "
   while true
     print prompt
     val = gets.strip
     return default if (val == "" && default != nil)
-    return val if val != ""    
+    return val if val != ""
     puts "Invalid value, try again"
-  end  
+  end
 end
 
 start_page = prompt_int("Start with page", 1)
@@ -53,7 +53,7 @@ FileUtils.mkdir_p(save_to)
 log_file = "log.txt"
 agent = Mechanize.new { |a|
   if File.exists?(log_file)
-     File.delete(log_file)
+    File.delete(log_file)
   end
   a.log = Logger.new(log_file)
   a.user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11"
@@ -68,44 +68,44 @@ total_pages.times do |page_index|
   song_list_str = page.search("#displayList-data").first.content
   song_json = JSON.parse(song_list_str)
   songs = song_json['tracks']
-end
 
-songs.each_with_index do |song,index|
-  json_url = "http://hypem.com/serve/source/#{song['id']}/#{song['key']}"
-  filename = "#{save_to}/#{clean_filename(song['artist'])} - #{clean_filename(song['song'])}.mp3"
-  next if (File.exists?(filename))
-    
-  begin
-    data_string = agent.get_file(json_url)  
-  rescue Exception => e
-    puts "Exception #{e.message}\nwhile trying to fetch json for file #{song['song']}"
-  end
-  
-  if (data_string != nil)  
-    data = JSON.parse(data_string)
-    song_url = data["url"]
-    puts " ************** Downloading song ******************"
-    puts "\tartist: #{song['artist']}\n\ttitle: #{song['song']}\n\turl: #{song_url}\n\tfile: #{filename}"
-    agent.pluggable_parser.default = Mechanize::Download   
-    begin  
-      agent.get(song_url).save(filename)
-      puts "Downloaded song to #{filename}.. now reading id3"
-     
-     TagLib::FileRef.open(filename) do | mp3File |
-         tag = mp3File.tag
-         if tag == nil || tag.title == nil
-             tag.title = song['song']
-             tag.artist = song['artist']
-                                     #tag.album = f_album unless f_album == nil
-             puts "artist #{song['artist']} and title #{song['song']} written for #{filename}"
-             mp3File.save
-         end
-     end
 
+  songs.each_with_index do |song,index|
+    json_url = "http://hypem.com/serve/source/#{song['id']}/#{song['key']}"
+    filename = "#{save_to}/#{clean_filename(song['artist'])} - #{clean_filename(song['song'])}.mp3"
+    next if (File.exists?(filename))
+
+    begin
+      data_string = agent.get_file(json_url)
     rescue Exception => e
-      puts "Exception #{e.message}\nwhile trying to fetch mp3 file for #{song['song']}"
+      puts "Exception #{e.message}\nwhile trying to fetch json for file #{song['song']}"
     end
-    break if page_limit > 0 && (index + 1) >= page_limit
+
+    if (data_string != nil)
+      data = JSON.parse(data_string)
+      song_url = data["url"]
+      puts " ************** Downloading song ******************"
+      puts "\tartist: #{song['artist']}\n\ttitle: #{song['song']}\n\turl: #{song_url}\n\tfile: #{filename}"
+      agent.pluggable_parser.default = Mechanize::Download
+      begin
+        agent.get(song_url).save(filename)
+        puts "Downloaded song to #{filename}.. now reading id3"
+
+        TagLib::FileRef.open(filename) do | mp3File |
+          tag = mp3File.tag
+          if tag == nil || tag.title == nil
+            tag.title = song['song']
+            tag.artist = song['artist']
+            #tag.album = f_album unless f_album == nil
+            puts "artist #{song['artist']} and title #{song['song']} written for #{filename}"
+            mp3File.save
+          end
+        end
+
+      rescue Exception => e
+        puts "Exception #{e.message}\nwhile trying to fetch mp3 file for #{song['song']}"
+      end
+      break if page_limit > 0 && (index + 1) >= page_limit
+    end
   end
 end
-
